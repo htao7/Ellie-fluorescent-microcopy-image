@@ -29,7 +29,7 @@ def FindWells(center_map,center_list,blur,im,radius):
     intensity_ratio_subtract = 0
     stddev_divide = 0
     stddev_subtract = 0
-    lines = cv2.HoughLines(center_map,radius / 5,np.pi / 360,5)
+    lines = cv2.HoughLines(center_map,radius / 5,np.pi / 360,3)
     if lines is None:
         return (im,intensity_ratio_divide,stddev_divide,intensity_ratio_subtract,stddev_subtract)
     [[rho0,theta0]] = lines[0]
@@ -83,10 +83,14 @@ def IntensityRatio(image):
     
     img0 = cv2.imread(image)
     r,c,_ = img0.shape
-    img = cv2.resize(img0,(int(c/10),int(r/10)),interpolation=cv2.INTER_AREA)
-
+    c2 = int(c/10)
+    r2 = int(r/10)
+    img = cv2.resize(img0,(c2,r2),interpolation=cv2.INTER_AREA)
+    #print(img0.shape)
+    
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     blur = cv2.GaussianBlur(hsv[:,:,2], (3, 3), 0)
+    
     
     #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     #blur = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -114,19 +118,21 @@ def IntensityRatio(image):
                              param1=70, param2=roundness + radius - 5, minRadius=int(0.9 * radius), maxRadius=int(1.1 * radius))
         if wells is not None:
             wells = np.uint16(np.around(wells))
-            center_map = np.zeros((int(r/10),int(c/10)),np.uint8)
+            center_map = np.zeros((r2,c2),np.uint8)
             center_list = []
             for i in wells[0,:]:
-                mask_fg = np.zeros((int(r/10),int(c/10)),np.uint8)
+                mask_fg = np.zeros((r2,c2),np.uint8)
                 cv2.circle(mask_fg,(i[0],i[1]),i[2],255,-1)
-                mask_bg = np.zeros((int(r/10),int(c/10)),np.uint8)
+                mask_bg = np.zeros((r2,c2),np.uint8)
                 cv2.circle(mask_bg,(i[0],i[1]),int(i[2] * 1.5),255,-1)
                 cv2.circle(mask_bg,(i[0],i[1]),i[2],0,-1)
                 if cv2.mean(blur,mask=mask_fg)[0] > 1.5 * cv2.mean(blur,mask=mask_bg)[0]:
                     center_map[i[1]][i[0]] = 255
                     center_list.append([i[0],i[1]])
             im,intensity_ratio_divide,stddev_divide,intensity_ratio_subtract,stddev_subtract = FindWells(center_map,center_list,blur,im,radius)
-        cv2.imshow('wells',im)
+        im_resized = cv2.resize(im,(1000,int(r/(c/1000))),interpolation=cv2.INTER_AREA)
+        cv2.imshow('wells',im_resized)
+        
 
     print("intensity ratio (divide) = " + str(intensity_ratio_divide))
     print("stddev (divide) = " + str(stddev_divide))
