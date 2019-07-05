@@ -24,7 +24,7 @@ def FindLabels(labels,r,c):
     bl_center = (bl_well[0][0][0],int (r / 2) + bl_well[0][0][1])
     br_center = (int (c / 2) + br_well[0][0][0],int(r / 2) + br_well[0][0][1])
     tl_center = (tl_well[0][0][0],tl_well[0][0][1])
-    radius = 0.95 * (bl_well[0][0][2] + br_well[0][0][2] + tl_well[0][0][2]) / 3
+    radius = (bl_well[0][0][2] + br_well[0][0][2] + tl_well[0][0][2]) / 3
 
     for i in bl_well[0,:]:
         cv2.circle(bl_region,(i[0],i[1]),i[2],127,1)
@@ -58,6 +58,10 @@ for imgfile in os.listdir('.'):
         #cv2.imshow('labels',img0)
 
         bl,br,tl,radius = FindLabels(labels,r1,c1)
+        template = np.zeros((2 * radius,2 * radius),np.uint8)
+        cv2.circle(template,(radius,radius),radius,255,-1)
+        
+        
         #print (bl,br,tl,radius)
 
         x_dist_row = (br[0] - bl[0]) / 49
@@ -65,8 +69,6 @@ for imgfile in os.listdir('.'):
         x_dist_col = (bl[0] - tl[0]) / 15
         y_dist_col = (bl[1] - tl[1]) / 15
 
-        mask = np.zeros((2 * radius,2 * radius),np.uint8)
-        cv2.circle(mask,(radius,radius),radius,255,-1)
         intensity = []
         for i in range(8):
             intensity.append([])
@@ -75,15 +77,34 @@ for imgfile in os.listdir('.'):
             for j in range(48):
                 x = int(anchor[0] + (j + 1) * x_dist_row)
                 y = int(anchor[1] + (j + 1) * y_dist_row)
-                cv2.circle(img0,(x,y),radius,(255,0,0),3)
-                #cv2.imshow('img0',img0)
-                intensity[i].append(cv2.mean(img[y-radius:y+radius,x-radius:x+radius],mask=mask)[0])
+                
+                roi = np.copy(img[y-radius-5:y+radius+5,x-radius-5:x+radius+5])
+                _,roi_thresh = cv2.threshold(roi,cv2.mean(roi)[0]-3,255,cv2.THRESH_BINARY)
+                matching = cv2.matchTemplate(roi_thresh,template,cv2.TM_SQDIFF_NORMED)
+                _,_,(x0,y0),_ = cv2.minMaxLoc(matching)
+                mask = np.zeros((2 * radius + 10,2 * radius + 10),np.uint8)
+                cv2.circle(mask,(x0+radius,y0+radius),radius,255,-1)
+                cv2.circle(img0,(x-5+x0,y-5+y0),radius,(255,0,0),3)
+
+                #cv2.imshow('roi',roi_thresh)
+                #cv2.imshow('mask',mask)
+                #cv2.waitKey(0)
+                
+                intensity[i].append(cv2.mean(roi,mask=mask)[0])
             anchor2 = (anchor[0] + x_dist_col,anchor[1] + y_dist_col)
             for j in range(48):
                 x = int(anchor2[0] + (j + 1) * x_dist_row)
                 y = int(anchor2[1] + (j + 1) * y_dist_row)
-                cv2.circle(img0,(x,y),radius,(255,0,0),3)
-                intensity[i].append(cv2.mean(img[y-radius:y+radius,x-radius:x+radius],mask=mask)[0])
+
+                roi = np.copy(img[y-radius-5:y+radius+5,x-radius-5:x+radius+5])
+                _,roi_thresh = cv2.threshold(roi,cv2.mean(roi)[0]-3,255,cv2.THRESH_BINARY)
+                matching = cv2.matchTemplate(roi_thresh,template,cv2.TM_SQDIFF_NORMED)
+                _,_,(x0,y0),_ = cv2.minMaxLoc(matching)
+                mask = np.zeros((2 * radius + 10,2 * radius + 10),np.uint8)
+                cv2.circle(mask,(x0+radius,y0+radius),radius,255,-1)
+                cv2.circle(img0,(x-5+x0,y-5+y0),radius,(255,0,0),3)
+                
+                intensity[i].append(cv2.mean(roi,mask=mask)[0])
 
         for i in range(8):
             #print (np.mean(intensity[i]),np.std(intensity[i]))
