@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 
-
+# locate the 3 corner wells of the chip labelled by users using blue circles (bottom-left, bottom-right and top-left).
 def FindLabels(labels,r,c):
     
     bl_region = np.copy(labels[int(r / 2):r,0:int(c / 2)])
@@ -49,8 +49,10 @@ for imgfile in os.listdir('.'):
         r1 = int(r / 4)
         c1 = int(c / 4)
         #cv2.namedWindow('wells',cv2.WINDOW_NORMAL)
-
+        
+        #blue labels made by users
         labels = img0[:,:,0]
+        #red fluorescent signal
         img = img0[:,:,2]
         
         #_,thresh = cv2.threshold(img,10,255,cv2.THRESH_BINARY)
@@ -64,12 +66,15 @@ for imgfile in os.listdir('.'):
         
         #print (bl,br,tl,radius)
 
+        # 50 * 16 chip
         x_dist_row = (br[0] - bl[0]) / 49
         y_dist_row = (br[1] - bl[1]) / 49
         x_dist_col = (bl[0] - tl[0]) / 15
         y_dist_col = (bl[1] - tl[1]) / 15
 
         intensity = []
+        
+        # calculate based on the 48 * (2 * 8) region
         for i in range(8):
             intensity.append([])
             #print (intensity)
